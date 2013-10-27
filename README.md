@@ -1,8 +1,8 @@
-OmniSharp Sublime Text 2 plugin
+OmniSharp Sublime Text 3 plugin
 ========================
-Experimental Sublime Text 2 plugin for [OmniSharp](https://github.com/nosami/Omnisharp) c# intellisense for Sublime Text.
+Experimental Sublime Text 3 plugin for [OmniSharp](https://github.com/nosami/Omnisharp) c# intellisense for Sublime Text.
 
- * Drop the Plugin into the Sublime Text 2 Packages directory
+ * Drop the Plugin into the Sublime Text 3 Packages directory
 
  * Run OmniSharp as usual. Assumes localhost:11000 (can be configured in OmniSharp.py)
 
