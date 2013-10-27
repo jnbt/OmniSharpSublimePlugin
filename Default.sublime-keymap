@@ -1,0 +1,11 @@
+[
+    {
+        "keys": ["."], "command": "omni_sharp_dot_complete",
+        "context":
+        [
+            {"key": "omnisharp.supported_language"},
+            {"key": "omnisharp.dotcomplete"},
+            {"key": "completion_common.is_code"}
+        ]
+    }
+]
