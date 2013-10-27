@@ -4,11 +4,11 @@ Experimental Sublime Text 2 plugin for [OmniSharp](https://github.com/nosami/Omn
 
  * Drop the Plugin into the Sublime Text 2 Packages directory
 
- * Run OmniSharp as usual.
+ * Run OmniSharp as usual. Assumes localhost:11000 (can be configured in OmniSharp.py)
 
  * Edit a c sharp file.
 
-Implemented so far: 
+Implemented so far:
 
  * C# auto complete.
 
