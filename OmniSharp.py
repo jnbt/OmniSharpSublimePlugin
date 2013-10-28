@@ -1,4 +1,4 @@
-import urllib, json, sublime_plugin, sublime, re
+import urllib, json, sublime_plugin, sublime, re, os, subprocess, threading, sys, queue
 import urllib.request
 
 omnisharp_server = "http://localhost:11000/"
@@ -20,9 +20,129 @@ class OmniSharpDotComplete(sublime_plugin.TextCommand):
     def delayed_complete(self):
         self.view.run_command("auto_complete")
 
+class OmniSharpServerRunner:
+    def __init__(self):
+        self.stdout_queue = queue.Queue()
+        self.server_proc  = None
+        self.running      = False
+
+    def is_running(self):
+        return self.running == True
+
+    def stdout_thread(self):
+        try:
+            while True:
+                if self.server_proc.poll() != None:
+                    break
+                read = self.server_proc.stdout.readline().strip().decode(sys.getdefaultencoding())
+                if read:
+                    self.stdout_queue.put(read)
+        finally:
+            self.running = False
+            print("OmniSharp server is no longer running.")
+
+    def stderr_thread(self):
+        try:
+            while True:
+                if self.server_proc.poll() != None:
+                    break
+                read = self.server_proc.stderr.readline().strip().decode(sys.getdefaultencoding())
+                if read:
+                    print("stderr: %s" % read)
+        finally:
+            pass
+
+    def start(self, port, solution_file):
+        cmd = ["mono"]
+        cmd.append("'%s'" % (os.path.join(sublime.packages_path(), "OmniSharpSublimePlugin", "OmniSharp", "OmniSharp.exe")))
+        cmd.append("-p")
+        cmd.append(str(port))
+        cmd.append("-s '%s'" % (solution_file))
+        print('running: '+" ".join(cmd))
+        self.server_proc = subprocess.Popen(
+            " ".join(cmd),
+            shell=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            stdin=subprocess.PIPE
+            )
+        self.running = True
+        t = threading.Thread(target=self.stdout_thread)
+        t.start()
+        t = threading.Thread(target=self.stderr_thread)
+        t.start()
+
+    def stop(self):
+        if self.server_proc != None:
+            print("Stopping OmniSharp server...")
+            # kill the process if open
+            try:
+                self.server_proc.kill()
+            except OSError:
+                # can't kill a dead proc
+                pass
+
+omnisharp_server_runner = OmniSharpServerRunner()
+
+# Command to start the server from a menu item
+class OmniSharpStartServer(sublime_plugin.TextCommand):
+    def run(self, edit):
+        if omnisharp_server_runner.is_running():
+            sublime.error_message("Already running a server OmniSharp server. You must stop it first")
+            return
+
+        self.find_solution_files()
+        if len(self.solution_files) == 0 :
+            sublime.error_message('No solution file found in Open Files.  Open a folder containing a .net solution')
+        if len(self.solution_files) > 1 :
+            messages = []
+            for solution in self.solution_files:
+                messages.append(["Select solution file:", solution])
+            self.select_solution_file(messages)
+        if len(self.solution_files) == 1 :
+            self.start_server_for_solution(0)
+
+    def find_solution_files(self):
+        window  = self.view.window()
+        folders = window.folders()
+        self.solution_files = []
+        if len(folders) == 1:
+            active_folder = folders[0]
+            for r,d,f in os.walk(active_folder):
+                for files in f:
+                    if files.endswith(".sln"):
+                        self.solution_files.append(os.path.join(r,files))
+
+    def select_solution_file(self, messages):
+        window = self.view.window()
+        window.show_quick_panel(messages, self.start_server_for_solution)
+
+    def start_server_for_solution(self, selected_index):
+        if 0 <= selected_index and len(self.solution_files) > selected_index:
+            solution_file = self.solution_files[selected_index]
+            omnisharp_server_runner.start(11000, solution_file)
+
+# Command to stop the server from a menu item
+class OmniSharpStopServer(sublime_plugin.TextCommand):
+    def run(self,edit):
+        omnisharp_server_runner.stop()
+
+# Also stop server when unloading
+def plugin_unloaded():
+    omnisharp_server_runner.stop()
+
 # Updates and build the completion list / checks for syntax errors
 class OmniSharp(sublime_plugin.EventListener):
     word_list = []
+
+    def on_close(self, view):
+        windows = sublime.windows()
+        if(len(windows) <= 0):
+            omnisharp_server_runner.stop()
+        elif(len(windows) == 1):
+            views = windows[0].views()
+            if(len(views) <= 0):
+                omnisharp_server_runner.stop()
 
     def on_pre_save(self, view):
       self.view = view

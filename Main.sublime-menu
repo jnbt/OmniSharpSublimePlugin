@@ -19,6 +19,18 @@
                                 "caption": "Readme"
                             },
                             {
+                                "command": "omni_sharp_start_server",
+                                "args": {
+                                },
+                                "caption": "Start OmniSharp server"
+                            },
+                            {
+                                "command": "omni_sharp_stop_server",
+                                "args": {
+                                },
+                                "caption": "Stop OmniSharp server"
+                            },
+                            {
                                 "caption": "-"
                             }
                         ]
